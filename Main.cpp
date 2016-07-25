@@ -81,8 +81,8 @@ void main()
 	}
 	cout << "\tDone" << endl;
 	// Тест производительности на 10,000,000 элементов
-	thread thr1(CycleNaive,200000000);
-	thread thr2(CycleOptim,200000000);
+	thread thr1(CycleNaive,10000000);
+	thread thr2(CycleOptim,10000000);
 	cout << "Summing 10M elements ..." << endl;
 	thr1.join();
 	thr2.join();
