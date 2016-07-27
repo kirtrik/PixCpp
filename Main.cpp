@@ -1,22 +1,10 @@
-#include <iostream>
+﻿#include <iostream>
 #include <thread>
 #include <stdlib.h>
+#include <mutex>
 using namespace std;
 
-union RGB
-{
-	unsigned long l;
-	unsigned char bytes[4];
-};
-
-unsigned long randomRGB ()
-{
-	RGB rgb1;
-	rgb1.l = 0;
-	for (int i=0; i < 3; i++)
-		rgb1.bytes[i] = rand() % 0x100;
-	return rgb1.l;
-}
+mutex thr_mutex;
 
 unsigned long SumOptim(unsigned long rgb1, unsigned long rgb2)
 {
@@ -46,11 +34,13 @@ void CycleOptim(unsigned long times)
 	clock_t begin = clock();
 	for (unsigned long i=0; i < times; i++)
 	{
-		SumOptim(i+5000, i+100000);
+		SumOptim(i, i);
 	}
 	clock_t end = clock();
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+	thr_mutex.lock();
 	cout << "Optim:\t" << elapsed_secs << endl;
+	thr_mutex.unlock();
 }
 
 void CycleNaive(unsigned long times)
@@ -58,32 +48,37 @@ void CycleNaive(unsigned long times)
 	clock_t begin = clock();
 	for (unsigned long i=0; i < times; i++)
 	{
-		SumNaive(i+5000, i+100000);
+		SumNaive(i, i);
 	}
 	clock_t end = clock();
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+	thr_mutex.lock();
 	cout << "Naive:\t" << elapsed_secs << endl;
+	thr_mutex.unlock();
 }
 
 void main()
 {
-	// ���� ������������
-	cout << "Correctness test on 10k elements ...";
+	// Пул значений для теста корректности:
+	//без переполнения; переполнение в 1-м, 2-м, 3-м байтах; 
+	//в 1-м и 2-м; в 1-м и 3-м; во 2-м и 3-м; переполнение во всех байтах; 
+	//переполнение в 1-м и сумма 255 во 2-м; переполнение в 1-м и сумма 255 во 2-м и 3-м; переполнение во 2-м и сумма 255 во 3-м
+	long test[11][2] = {{0x00a7432f, 0x00275871}, {0x00a7432f, 0x002758e3}, {0x00a7432f, 0x0027c071}, {0x00a7432f, 0x00595871},
+						{0x00a7432f, 0x0027c0e3}, {0x00a7432f, 0x005958e3}, {0x00a7432f, 0x0059c071}, {0x00a7432f, 0x0059c0e3},
+						{0x00a7432f, 0x0027bce3}, {0x00a7432f, 0x0058bc71}, {0x00a7432f, 0x0058c071}};
+	cout << "Correctness test on pull of elements ...";
 	
-	for (unsigned long i=0; i < 10000; i++)
+	for (int i=0; i < 11; i++)
 	{
-		unsigned long rgb1 = randomRGB();
-		unsigned long rgb2 = randomRGB();
-		unsigned long rgb3 = SumNaive(rgb1, rgb2);
-		unsigned long rgb4 = SumOptim(rgb1, rgb2);
-		if(SumNaive(rgb1, rgb2) ^ SumOptim(rgb1, rgb2))
+		if(SumNaive(test[i][0], test[i][1]) ^ SumOptim(test[i][0], test[i][1]))
 			cout << "Error!" << endl;
 	}
 	cout << "\tDone" << endl;
-	// ���� ������������������ �� 10,000,000 ���������
-	thread thr1(CycleNaive,10000000);
-	thread thr2(CycleOptim,10000000);
-	cout << "Summing 10M elements ..." << endl;
+	// Тест производительности на N элементов
+	const long N = 10000000;
+	thread thr1(CycleNaive, N);
+	thread thr2(CycleOptim, N);
+	cout << "Summing " << N << " elements ..." << endl;
 	thr1.join();
 	thr2.join();
 	char q;
