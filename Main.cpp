@@ -9,10 +9,11 @@ mutex thr_mutex;
 unsigned long SumOptim(unsigned long rgb1, unsigned long rgb2)
 {
 	unsigned long sum = rgb1 + rgb2;
-	unsigned long mask = (rgb1 ^ rgb2 ^ sum) & 0x01010100;
-	mask = mask ^ (((sum - (mask & 0x00000100)) ^ sum) & 0x01010000);
-	mask = mask ^ (((sum - (mask & 0x00010000)) ^ sum) & 0x01000000);
+	unsigned long tobe = (rgb1 ^ rgb2) & 0x01010100;
+	unsigned long mask = (tobe ^ sum) & 0x01010100;
 	sum = sum - mask;
+	tobe = (tobe ^ sum) & 0x01010100;
+	sum = sum + tobe;
 	mask = (mask * 0xFF) >> 8;
 	return sum | mask;
 }
